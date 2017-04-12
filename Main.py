@@ -6,5 +6,4 @@ import GroupTools
 inpt = '<A,B | AA, BB, BABB>'
 print('input: {}'.format(inpt))
 a = GroupTools.Group(inpt)
-
-
+print(str(a))
