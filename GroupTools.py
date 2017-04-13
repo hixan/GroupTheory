@@ -138,7 +138,6 @@ class Mappings:
             self.table[char] = {}
         self.maxDef = 1 # last current elements index.
 
-    @debug
     def fLookup(self, num, char):
         '''if defined, finds the number that is the result of multiplying
         element number num with element char in that order.
@@ -150,7 +149,6 @@ class Mappings:
             raise KeyError("fLookup: {}{} is not yet defined.".format(num,
             char))
 
-    @debug
     def createDefinition(self):
         '''creates a new definition at the earliest position available.'''
         # assign charnum to the lowest number (first) and earliest char
@@ -165,21 +163,20 @@ class Mappings:
                 except KeyError:
                     charnum = (c, i)
                     break
+        if charnum is None:
+            return False
         self.maxDef += 1
         self.table[charnum[0]][charnum[1]] = self.maxDef
 
-    @debug
     def bLookup(self, char, num):
         '''looks up the number n1 that satisfies the equation:
         n1 * char = num.'''
-        print(self.table)
         for key, item in self.table[char].items():
             if num == item:
                 return key
         raise KeyError("bLookup: {}{} is not yet defined.".format(char,
             num))
     
-    @debug
     def define(self, num1, char, num2):
         '''defines new definition in the mapping,
         and makes sure its the same as another if it already exists.'''
@@ -188,9 +185,6 @@ class Mappings:
             # make sure that this is not overwriting a previous definition
         except KeyError:
             self.table[char][num1] = num2
-        except AssertionError:
-            print('{}\n{}{}{}'.format(self, num1, char, num2))
-            raise
 
     def __str__(self):
         maxnum = self.maxDef
@@ -229,15 +223,13 @@ class Group:
         self.m = Mappings(splitvals[0])
 
     def addNumber(self):
-        self.m.createDefinition()
+        if self.m.createDefinition() is False:
+            return
         self.dt.addRow()
 
     def solve(self):
-        print(self)
         while self.dt._incomplete():
             self.addNumber()
-            print(self)
             self.dt.putDefined(self.m)
-            print(self)
     def __str__(self):
         return str(self.dt) + '\n' + str(self.m)
