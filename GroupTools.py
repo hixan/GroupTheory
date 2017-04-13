@@ -26,6 +26,7 @@ class DataTable:
         self.addRow()
 
     def _incomplete(self):
+        ''':return: True if table is complete (there are no holes)'''
         for rows in self.data.values():
             for row in rows:
                 if None in row:
@@ -33,6 +34,7 @@ class DataTable:
         return False
 
     def addRow(self):
+        '''adds new row to data table'''
         for header, rows in self.data.items():
             rows.append([len(rows)+1]+[None]*(len(header)-1)+[len(rows)+1])
 
@@ -77,7 +79,7 @@ class DataTable:
         return changed
     
     def putDefined(self, mappings):
-        '''fills out the rows with definitions contained in mapping.'''
+        '''fills out all rows with definitions contained in mapping.'''
         def wrapper(lookup, *args, **kwargs):
             # error handling in a function!
             try:
@@ -107,25 +109,6 @@ class DataTable:
                 # None is no longer in row, this row was completed. This
                 # means there is the possibility of a new definition having
                 # been exposed.
-            '''
-            if not None in row:
-                return # this row is already filled
-            i = row.index(None)
-            try:
-                # foreward fill this row
-                row[i] = mappings.fLookup(row[i-1], header[i-1])
-                # throws KeyError if not yet defined.
-            except KeyError:
-                return # stop calculating if value still undefined.
-            if None in row:
-                fillRow(row, mappings, header) # keep filling
-            else:
-                self.addDefined(mappings)
-                # the row has been filled, so either:
-                # -a new mapping has been discovered or:
-                # -the closed row is already defined, and can be
-                #   checked for integrity
-                '''
         for header, rows in self.data.items():
             for row in rows:
                 fillRow(row, mappings, header)
@@ -223,11 +206,13 @@ class Group:
         self.m = Mappings(splitvals[0])
 
     def addNumber(self):
+        '''adds a new entry to this groups datatable and mappings table'''
         if self.m.createDefinition() is False:
             return
         self.dt.addRow()
 
     def solve(self):
+        '''finds all the elements!'''
         while self.dt._incomplete():
             self.addNumber()
             self.dt.putDefined(self.m)
