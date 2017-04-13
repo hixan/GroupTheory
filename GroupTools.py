@@ -217,4 +217,5 @@ class Group:
             self.addNumber()
             self.dt.putDefined(self.m)
     def __str__(self):
-        return str(self.dt) + '\n' + str(self.m)
+        return ('Todd-Coxter algorithm:\n{}\n\nBasic element table: \n{}\n'
+            .format(str(self.dt),str(self.m)))
