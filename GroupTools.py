@@ -1,6 +1,15 @@
 #!/usr/bin/python3
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
 import re
+def debug(func):
+    def newFunc(*args, **kwargs):
+        print('{m}(\n{a}\n{k}):'.format(
+            m=func.__name__, a='\n'.join(map(str, args)),
+            k=kwargs if len(kwargs)>0 else ''))
+        rval = func(*args, **kwargs)
+        print('    {}'.format(rval))
+        return rval
+    return newFunc
 
 class DataTable:
     '''table that contains the information about the algorithm, easier to
@@ -15,6 +24,13 @@ class DataTable:
         for header in headers:
             self.data[header] = []
         self.addRow()
+
+    def _incomplete(self):
+        for rows in self.data.values():
+            for row in rows:
+                if None in row:
+                    return True
+        return False
 
     def addRow(self):
         for header, rows in self.data.items():
@@ -47,34 +63,69 @@ class DataTable:
                 '\n'.join(map(lambda x : ''.join(x), strings[1:])))
 
     def addDefined(self, mapping):
-        # puts all non-previously defined items into the mapping object,
-        # and checks integrity of the datastructure.
+        ''':param mapping: mapping object containing the mappings for this
+        DataTable.
+        puts all non-previously defined items into the mapping object, and
+        checks integrity of the datastructure.'''
+        changed = False
         for header, rows in self.data.items():
             for row in rows:
                 if not None in row:
                     for i in range(len(row)-1):
                         mapping.define(row[i], header[i], row[i+1])
+                        changed = True
+        return changed
     
     def putDefined(self, mappings):
-        def fillRow(row, mappings, header):
+        '''fills out the rows with definitions contained in mapping.'''
+        def wrapper(lookup, *args, **kwargs):
+            # error handling in a function!
             try:
-                i = row.index(None)
-            except ValueError:
+                rval = lookup(*args, **kwargs)
+            except KeyError:
                 return
-            finally:
-                try:
-                    row[i] = mappings.fLookup(row[i-1], header[i-1])
-                except KeyError:
-                    return # stop calculating if value still undefined.
-                finally:
-                    if None in row:
-                        fillRow(row, mappings, header) # keep filling
-                    else:
-                        self.addDefined(mappings)
-                        # the row has been filled, so either:
-                        # -a new mapping has been discovered or:
-                        # -the closed row is already defined, and can be
-                        #   checked for integrity
+            return rval
+        def fillRow(row, mappings, header):
+            if not None in row:
+                return # this row is already filled.
+            fi = row.index(None) # foreward index
+            fv = wrapper(mappings.fLookup, row[fi-1], header[fi-1])
+            # forewards value
+            if fv is None:
+                bi = len(row) - row[::-1].index(None) - 1 # backwards index
+                bv = wrapper(mappings.bLookup, header[bi], row[bi+1])
+                # backwards value
+                if bv is None:
+                    return
+                row[bi] = bv
+            else:
+                row[fi] = fv
+            if None in row:
+                fillRow(row, mappings, header)
+            else:
+                self.addDefined(mappings)
+                # None is no longer in row, this row was completed. This
+                # means there is the possibility of a new definition having
+                # been exposed.
+            '''
+            if not None in row:
+                return # this row is already filled
+            i = row.index(None)
+            try:
+                # foreward fill this row
+                row[i] = mappings.fLookup(row[i-1], header[i-1])
+                # throws KeyError if not yet defined.
+            except KeyError:
+                return # stop calculating if value still undefined.
+            if None in row:
+                fillRow(row, mappings, header) # keep filling
+            else:
+                self.addDefined(mappings)
+                # the row has been filled, so either:
+                # -a new mapping has been discovered or:
+                # -the closed row is already defined, and can be
+                #   checked for integrity
+                '''
         for header, rows in self.data.items():
             for row in rows:
                 fillRow(row, mappings, header)
@@ -87,6 +138,7 @@ class Mappings:
             self.table[char] = {}
         self.maxDef = 1 # last current elements index.
 
+    @debug
     def fLookup(self, num, char):
         '''if defined, finds the number that is the result of multiplying
         element number num with element char in that order.
@@ -98,38 +150,36 @@ class Mappings:
             raise KeyError("fLookup: {}{} is not yet defined.".format(num,
             char))
 
-    def createDefinition(self, charnum=None):
-        '''creates a new definition. throws a ValueError if charnum is
-        previously defined or charnum is not of size 2'''
-        if charnum is None:
-            # assign charnum to the lowest number (first) and earliest char
-            # (second) 
-            for i in range(1, self.maxDef+1):
-                if charnum is not None:
+    @debug
+    def createDefinition(self):
+        '''creates a new definition at the earliest position available.'''
+        # assign charnum to the lowest number (first) and earliest char
+        # (second) 
+        charnum = None
+        for i in range(1, self.maxDef+1):
+            if charnum is not None:
+                break
+            for c in self.table.keys():
+                try:
+                    self.table[c][i]
+                except KeyError:
+                    charnum = (c, i)
                     break
-                for c in self.table.keys():
-                    try:
-                        self.table[c][i]
-                    except KeyError:
-                        charnum = (c, i)
-                        break
-        else:
-            if len(charnum) != 2:
-                raise ValueError(
-                'the length of charnum={} should be 2'.format(str(charnum)))
         self.maxDef += 1
         self.table[charnum[0]][charnum[1]] = self.maxDef
 
-
+    @debug
     def bLookup(self, char, num):
         '''looks up the number n1 that satisfies the equation:
         n1 * char = num.'''
-        for key, item in self.table[char]:
+        print(self.table)
+        for key, item in self.table[char].items():
             if num == item:
                 return key
         raise KeyError("bLookup: {}{} is not yet defined.".format(char,
             num))
     
+    @debug
     def define(self, num1, char, num2):
         '''defines new definition in the mapping,
         and makes sure its the same as another if it already exists.'''
@@ -138,6 +188,9 @@ class Mappings:
             # make sure that this is not overwriting a previous definition
         except KeyError:
             self.table[char][num1] = num2
+        except AssertionError:
+            print('{}\n{}{}{}'.format(self, num1, char, num2))
+            raise
 
     def __str__(self):
         maxnum = self.maxDef
@@ -175,8 +228,16 @@ class Group:
         self.dt = DataTable(splitvals[1])
         self.m = Mappings(splitvals[0])
 
+    def addNumber(self):
+        self.m.createDefinition()
+        self.dt.addRow()
+
     def solve(self):
-        pass
-    
+        print(self)
+        while self.dt._incomplete():
+            self.addNumber()
+            print(self)
+            self.dt.putDefined(self.m)
+            print(self)
     def __str__(self):
         return str(self.dt) + '\n' + str(self.m)
