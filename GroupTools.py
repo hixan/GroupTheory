@@ -132,6 +132,15 @@ class Mappings:
             raise KeyError("fLookup: {}{} is not yet defined.".format(num,
             char))
 
+    def elements(self):
+        '''iterates through each element, and yields its mappings for each
+        independant element'''
+        for i in range(1, self.maxDef+1):
+            yval = {}
+            for key, items in self.table.items():
+                yval[key] = items[i]
+            yield i, yval
+
     def createDefinition(self):
         '''creates a new definition at the earliest position available.'''
         # assign charnum to the lowest number (first) and earliest char
@@ -159,6 +168,11 @@ class Mappings:
                 return key
         raise KeyError("bLookup: {}{} is not yet defined.".format(char,
             num))
+    def lookup(n1, c, n2=None):
+        if n1 is None:
+            return fLookup(n1, c)
+        elif n2 is None:
+            return bLookup(c, n2)
     
     def define(self, num1, char, num2):
         '''defines new definition in the mapping,
@@ -188,7 +202,42 @@ class Mappings:
             lambda x:formatnum.format(str(x) if x is not None else ' '),
             row)), strings[1:]))
         return rval
-        
+
+
+class ElementFinder:
+    
+    def __init__(self, m:Mappings):
+        self.m = m
+        self.table = {}
+    
+    class E:
+        def __init__(self, code:int, *values:str):
+            self.code = code
+            self.values = values
+            for v in values:
+                assert type(v) is str
+            self.equalities = []
+            self.order = None
+        def _isMult(self, other1:E, other2:E):
+            '''other1*other2 = self, so how can self be simplified/
+            replesented?'''
+            assert type(other1) is E
+            assert type(other2) is E
+            
+            for e1 in other1.equalities:
+                for e2 in other2.equalities:
+                    self.equalities.append(e1+e2)
+            # TODO: simplification and order calculation
+
+        def __eq__(self, other):
+            return self.code == other.code
+        def __ne__(self, other):
+            return not self.__eq__(other)
+        def __hash__(self):
+            return self.code.__hash__() # TODO: better hashing function
+            # although self.values can change, it is only telling us more
+            # about the element, and its actual behaviour and properties
+            # do not change.
 
 
 class Group:
@@ -216,6 +265,8 @@ class Group:
         while self.dt._incomplete():
             self.addNumber()
             self.dt.putDefined(self.m)
+        self.elements = []
+
     def __str__(self):
         return ('Todd-Coxter algorithm:\n{}\n\nBasic element table: \n{}\n'
             .format(str(self.dt),str(self.m)))
