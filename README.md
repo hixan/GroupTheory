@@ -6,8 +6,6 @@ combinations must be converted using the elements order.
 coming features:
 	- element multiplication table
 	- element equivalence calculation
-todo list:
-	- proper doctesting
 changelog:
 	1.0:
 		first working prototype
