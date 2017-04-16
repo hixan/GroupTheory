@@ -14,7 +14,8 @@ def debug(func):
 class DataTable:
     '''table that contains the information about the algorithm, easier to
     keep track of elements rather then getting elements of elements of
-    hashmaps.'''
+    hashmaps.
+    '''
 
     def __init__(self, headers):
         '''
@@ -105,7 +106,15 @@ class DataTable:
             if None in row:
                 fillRow(row, mappings, header)
             else:
-                self.addDefined(mappings)
+                try:
+                    self.addDefined(mappings)
+                except RuntimeError:
+                    print(self)
+                    print(mappings)
+                    print('header:{}\n   row:{}'.format(header,str(row)))
+                    import time
+                    time.sleep(1)
+                    raise
                 # None is no longer in row, this row was completed. This
                 # means there is the possibility of a new definition having
                 # been exposed.
@@ -178,7 +187,8 @@ class Mappings:
         '''defines new definition in the mapping,
         and makes sure its the same as another if it already exists.'''
         try:
-            assert self.table[char][num1] == num2
+            if self.table[char][num1] != num2:
+                raise RuntimeError('{}{} = {} not {}'.format(num1, char, self.table[char][num1], num2))
             # make sure that this is not overwriting a previous definition
         except KeyError:
             self.table[char][num1] = num2
@@ -218,7 +228,7 @@ class ElementFinder:
                 assert type(v) is str
             self.equalities = []
             self.order = None
-        def _isMult(self, other1:E, other2:E):
+        def _isMult(self, other1, other2):
             '''other1*other2 = self, so how can self be simplified/
             replesented?'''
             assert type(other1) is E
