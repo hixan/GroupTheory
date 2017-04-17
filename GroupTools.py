@@ -11,6 +11,7 @@ def debug(func):
         return rval
     return newFunc
 
+
 class DataTable:
     '''table that contains the information about the algorithm, easier to
     keep track of elements rather then getting elements of elements of
@@ -47,7 +48,7 @@ class DataTable:
         strings = []
         # will hold every column as a list, then gets flipped to hold every
         # row as a list
-        for header, rows in self.data.items():
+        for header, rows in sorted(self.data.items(), key=lambda x:x[0]):
             # adds header seperated by the right number of spaces.
             strings.append(
                 [''.join(map(lambda x:formatstr.format(x), header))])
@@ -158,7 +159,7 @@ class Mappings:
         for i in range(1, self.maxDef+1):
             if charnum is not None:
                 break
-            for c in self.table.keys():
+            for c in sorted(self.table.keys()):
                 try:
                     self.table[c][i]
                 except KeyError:
@@ -198,7 +199,7 @@ class Mappings:
         formatstr = '{:<'+str(len(str(maxnum))+1)+'}'
         formatnum = '{:>'+str(len(str(maxnum))+1)+'}'
         strings = []
-        strings.append(list(self.table.keys()))
+        strings.append(list(sorted(self.table.keys())))
         strings[0].insert(0, 'I')
         for i in range(1, maxnum+1):
             strings.append([i])
