@@ -167,8 +167,7 @@ class Mappings:
                     break
         if charnum is None:
             return False
-        self.maxDef += 1
-        self.table[charnum[0]][charnum[1]] = self.maxDef
+        self.define(charnum[1], charnum[0], self.maxDef+1)
 
     def bLookup(self, char, num):
         '''looks up the number n1 that satisfies the equation:
@@ -193,6 +192,8 @@ class Mappings:
             # make sure that this is not overwriting a previous definition
         except KeyError:
             self.table[char][num1] = num2
+            if num2 > self.maxDef:
+                self.maxDef = num2
 
     def __str__(self):
         maxnum = self.maxDef
