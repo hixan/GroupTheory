@@ -177,23 +177,21 @@ class Mappings:
                 return key
         raise KeyError("bLookup: {}{} is not yet defined.".format(char,
             num))
-    def lookup(n1, c, n2=None):
-        if n1 is None:
-            return fLookup(n1, c)
-        elif n2 is None:
-            return bLookup(c, n2)
     
     def define(self, num1, char, num2):
         '''defines new definition in the mapping,
         and makes sure its the same as another if it already exists.'''
         try:
             if self.table[char][num1] != num2:
-                raise RuntimeError('{}{} = {} not {}'.format(num1, char, self.table[char][num1], num2))
+                raise RuntimeError('{}{} = {} not {}'.format(
+                    num1, char, self.table[char][num1], num2))
             # make sure that this is not overwriting a previous definition
         except KeyError:
             self.table[char][num1] = num2
             if num2 > self.maxDef:
                 self.maxDef = num2
+            elif num1 > self.maxDef:
+                self.maxDef = num1
 
     def __str__(self):
         maxnum = self.maxDef
