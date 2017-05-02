@@ -81,48 +81,67 @@ class DataTable:
         return changed
     
     def putDefined(self, mappings):
-        '''fills out all rows with definitions contained in mapping.'''
-        def wrapper(lookup, *args, **kwargs):
-            # error handling in a function!
+        def forfr(row, header, start=0, end=None): # foreward fill row
+            if start == end:
+                return False
+            if end is None:
+                end = len(header) - 1
+            if row[start] is None:
+                return # this return value should never be used
+            if row[start+1] is not None:
+                # keep going until undefined
+                return forfr(row, header, start+1, end)
             try:
-                rval = lookup(*args, **kwargs)
+                row[start+1] = mappings.fLookup(row[start], header[start])
             except KeyError:
-                return
-            return rval
-        def fillRow(row, mappings, header):
-            if not None in row:
-                return # this row is already filled.
-            fi = row.index(None) # foreward index
-            fv = wrapper(mappings.fLookup, row[fi-1], header[fi-1])
-            # forewards value
-            if fv is None:
-                bi = len(row) - row[::-1].index(None) - 1 # backwards index
-                bv = wrapper(mappings.bLookup, header[bi], row[bi+1])
-                # backwards value
-                if bv is None:
-                    return
-                row[bi] = bv
-            else:
-                row[fi] = fv
-            if None in row:
-                fillRow(row, mappings, header)
-            else:
-                try:
-                    self.addDefined(mappings)
-                except RuntimeError:
-                    print(self)
-                    print(mappings)
-                    print('header:{}\n   row:{}'.format(header,str(row)))
-                    import time
-                    time.sleep(1)
-                    raise
-                # None is no longer in row, this row was completed. This
-                # means there is the possibility of a new definition having
-                # been exposed.
-        for header, rows in self.data.items():
-            for row in rows:
-                fillRow(row, mappings, header)
+                return False
+            finally:
+                # keep filling, but return true regardless.
+                forfr(row, header, start+1, end)
+                return True # this function has changed the row
 
+        def bacfr(row, header, start=0, end=None):
+            if start == end:
+                return False
+            if end is None:
+                end = len(header) - 1
+            if row[end+1] is None:
+                return #this return value should never be used
+            if row[end] is not None:
+                # keep going until undefined
+                return bacfr(row, header, start, end-1)
+            try:
+                row[end] = mappings.bLookup(header[end], row[end+1])
+            except KeyError:
+                return False
+            finally:
+                # keep filling while we can
+                bacfr(row, header, start, end-1)
+                return True # function has changed row
+        
+        def fillall():
+            # returns true if filling all has changed any values
+            changed = False
+            for header, rows in self.data.items():
+                for row in rows:
+                    count = row.count(None)
+                    forfr(row, header)
+                    bacfr(row, header)
+                    changed = count != row.count(None)
+            return changed
+
+        while fillall():
+            b = Group(None)
+            b.m = mappings
+            b.dt = self
+            print(b)
+            self.addDefined(mappings)
+            try:
+                self.counter += 1
+            except:
+                self.counter = 0
+            print(self.counter)
+        
 
 class Mappings:
     def __init__(self, chars):
@@ -151,6 +170,7 @@ class Mappings:
                 yval[key] = items[i]
             yield i, yval
 
+    @debug
     def createDefinition(self):
         '''creates a new definition at the earliest position available.'''
         # assign charnum to the lowest number (first) and earliest char
@@ -161,11 +181,11 @@ class Mappings:
                 break
             for c in sorted(self.table.keys()):
                 try:
-                    self.table[c][i]
+                    self.table[c][i] # check this entry is  defined
                 except KeyError:
-                    charnum = (c, i)
+                    charnum = c, i # if not, this is the new definition
                     break
-        if charnum is None:
+        if charnum is None: # table is full
             return False
         self.define(charnum[1], charnum[0], self.maxDef+1)
 
@@ -177,7 +197,7 @@ class Mappings:
                 return key
         raise KeyError("bLookup: {}{} is not yet defined.".format(char,
             num))
-    
+
     def define(self, num1, char, num2):
         '''defines new definition in the mapping,
         and makes sure its the same as another if it already exists.'''
@@ -257,6 +277,8 @@ class Group:
         <A, B[,*x]|AAA,BB,AAB[,*y]> where x are characters that represent
         linearly independant elements of the group, and y are all strings
         made up of the characters before, and equal the index element"""
+        if string is None:
+            return
         # string like '<A,B,C|AA,BB,CC,BABCAC,BCABAC>'
         string = re.subn(r'[<> ]', '', string)[0]
         splitvals = list(map(lambda x : x.split(','), string.split('|')))
@@ -278,5 +300,12 @@ class Group:
         self.elements = []
 
     def __str__(self):
-        return ('Todd-Coxter algorithm:\n{}\n\nBasic element table: \n{}\n'
-            .format(str(self.dt),str(self.m)))
+        toddc = str(self.dt).split("\n")
+        defn = str(self.m).split("\n")
+        rval = ("Todd Coxter:" + " "*(len(toddc[0])-10) + "Definitions:\n" +
+            toddc[0] + "  " * len(str(self.m.maxDef)) + defn[0])
+        for t, d in zip(toddc[1:], defn[1:]):
+            rval += '\n' + t + d
+        return rval
+        #return ('Todd-Coxter algorithm:\n{}\n\nBasic element table: \n{}\n'
+            #.format(str(self.dt),str(self.m)))
