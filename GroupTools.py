@@ -1,5 +1,7 @@
 #!/usr/bin/python3
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
+import traceback
+import sys
 import re
 def debug(func):
     def newFunc(*args, **kwargs):
@@ -76,9 +78,32 @@ class DataTable:
             for row in rows:
                 if not None in row:
                     for i in range(len(row)-1):
-                        mapping.define(row[i], header[i], row[i+1])
+                        try:
+                            mapping.define(row[i], header[i], row[i+1])
+                        except RuntimeError:
+                            prevDef = mapping.fLookup(row[i], header[i])
+                            if row[i+1] < prevDef:
+                                self.replaceWith(prevDef, row[i+1])
+                                mapping.overwriteDefine(row[i], header[i],
+                                                        row[i+1])
+                            else:
+                                prevDef = mapping.bLookup(header[i],
+                                                            row[i+1])
+                                if row[i] < prevDef:
+                                    self.replaceWith(prevDef, row[i])
+                                    mapping.overwriteDefine(row[i],
+                                                    header[i], row[i+1])
                         changed = True
         return changed
+
+    def replaceWith(self, toReplace, newNumber):
+        print('replacing all occurances of {} with {}.'.format(toReplace,
+                                                                newNumber))
+        for rows in self.data.values():
+            for row in rows:
+                for i in range(len(row)):
+                    if row[i] == toReplace:
+                        row[i] = newNumber
     
     def putDefined(self, mappings):
         def forfr(row, header, start=0, end=None): # foreward fill row
@@ -127,20 +152,12 @@ class DataTable:
                     count = row.count(None)
                     forfr(row, header)
                     bacfr(row, header)
-                    changed = count != row.count(None)
+                    if count != row.count(None):
+                        changed = True
             return changed
 
-        while fillall():
-            b = Group(None)
-            b.m = mappings
-            b.dt = self
-            print(b)
-            self.addDefined(mappings)
-            try:
-                self.counter += 1
-            except:
-                self.counter = 0
-            print(self.counter)
+        while fillall(): # while fillall changes self.data
+            self.addDefined(mappings) # add all new definitions
         
 
 class Mappings:
@@ -150,6 +167,14 @@ class Mappings:
             self.table[char] = {}
         self.maxDef = 1 # last current elements index.
 
+    def overwriteDefine(self, num1, char, num2):
+        if self.table[char][num1] != num2:
+            self.table[char][num1] = num2
+        else:
+            raise RuntimeError(
+            'trying to redefine definition that is not defined yet\n{}{}{}'
+            .format(num1, char, num2))
+
     def fLookup(self, num, char):
         '''if defined, finds the number that is the result of multiplying
         element number num with element char in that order.
@@ -158,7 +183,7 @@ class Mappings:
         try:
             return self.table[char][num]
         except KeyError:
-            raise KeyError("fLookup: {}{} is not yet defined.".format(num,
+            raise KeyError('fLookup: {}{} is not yet defined.'.format(num,
             char))
 
     def elements(self):
@@ -170,7 +195,6 @@ class Mappings:
                 yval[key] = items[i]
             yield i, yval
 
-    @debug
     def createDefinition(self):
         '''creates a new definition at the earliest position available.'''
         # assign charnum to the lowest number (first) and earliest char
@@ -195,18 +219,20 @@ class Mappings:
         for key, item in self.table[char].items():
             if num == item:
                 return key
-        raise KeyError("bLookup: {}{} is not yet defined.".format(char,
+        raise KeyError('bLookup: {}{} is not yet defined.'.format(char,
             num))
 
     def define(self, num1, char, num2):
         '''defines new definition in the mapping,
         and makes sure its the same as another if it already exists.'''
+        #self.table[char] # assure this char exists in the table
         try:
             if self.table[char][num1] != num2:
                 raise RuntimeError('{}{} = {} not {}'.format(
                     num1, char, self.table[char][num1], num2))
             # make sure that this is not overwriting a previous definition
         except KeyError:
+            print('Defining:', num1, char, num2)
             self.table[char][num1] = num2
             if num2 > self.maxDef:
                 self.maxDef = num2
@@ -300,10 +326,10 @@ class Group:
         self.elements = []
 
     def __str__(self):
-        toddc = str(self.dt).split("\n")
-        defn = str(self.m).split("\n")
-        rval = ("Todd Coxter:" + " "*(len(toddc[0])-10) + "Definitions:\n" +
-            toddc[0] + "  " * len(str(self.m.maxDef)) + defn[0])
+        toddc = str(self.dt).split('\n')
+        defn = str(self.m).split('\n')
+        rval = ('Todd Coxter:' + ' '*(len(toddc[0])-12) + 'Definitions:\n' +
+            toddc[0] + '  ' * len(str(self.m.maxDef)) + defn[0])
         for t, d in zip(toddc[1:], defn[1:]):
             rval += '\n' + t + d
         return rval

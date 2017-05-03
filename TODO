@@ -1,4 +1,6 @@
 bug: DataTable.putDefined does not always fill out all rows it can before it finishes.
 feature: elements list
 testing
+better selection of new definition element to prevent the same element being
+redefined (results in 18=8 in <A,B|AAABAAABAAABAAAB,AAAA,BB,AABAAB> for eg.
 
