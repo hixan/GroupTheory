@@ -1,7 +1,5 @@
 #!/usr/bin/python3
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
-import traceback
-import sys
 import re
 def debug(func):
     def newFunc(*args, **kwargs):
@@ -97,8 +95,6 @@ class DataTable:
         return changed
 
     def replaceWith(self, toReplace, newNumber):
-        print('replacing all occurances of {} with {}.'.format(toReplace,
-                                                                newNumber))
         for rows in self.data.values():
             for row in rows:
                 for i in range(len(row)):
@@ -195,20 +191,49 @@ class Mappings:
                 yval[key] = items[i]
             yield i, yval
 
-    def createDefinition(self):
+    def definitions(self):
+        '''generator that returns all elements'''
+        for char, mappings in self.table.items():
+            for num1, num2 in mappings.items():
+                yield num1, char, num2
+        
+
+    def createDefinition(self, dataTable=None):
         '''creates a new definition at the earliest position available.'''
         # assign charnum to the lowest number (first) and earliest char
         # (second) 
         charnum = None
-        for i in range(1, self.maxDef+1):
-            if charnum is not None:
-                break
-            for c in sorted(self.table.keys()):
-                try:
-                    self.table[c][i] # check this entry is  defined
-                except KeyError:
-                    charnum = c, i # if not, this is the new definition
+        if dataTable is None:
+            for i in range(1, self.maxDef+1):
+                if charnum is not None:
                     break
+                for c in sorted(self.table.keys()):
+                    try:
+                        self.table[c][i] # check this entry is  defined
+                    except KeyError:
+                        charnum = c, i # if not, this is the new definition
+                        break
+        else:
+            def iter(datatable): # TODO implement in DataTable class instead
+                for header, rows in datatable.data.items():
+                    for row in rows:
+                        yield header, row
+            # add a definition needed for the row with the smallest number
+            # of Nones in it.
+            b = False
+            for nl in range(1, max(map(len, dataTable.data.keys()))-2):
+                # nl = none length
+                if b:
+                    break
+                for header, row in iter(dataTable):
+                    if row.count(None) == nl:
+                        i = row.index(None)
+                        charnum = header[i-1], row[i-1]
+                        b = True
+                        print('charnum defining', charnum, header, row)
+                    if b:
+                        break
+
         if charnum is None: # table is full
             return False
         self.define(charnum[1], charnum[0], self.maxDef+1)
@@ -232,7 +257,6 @@ class Mappings:
                     num1, char, self.table[char][num1], num2))
             # make sure that this is not overwriting a previous definition
         except KeyError:
-            print('Defining:', num1, char, num2)
             self.table[char][num1] = num2
             if num2 > self.maxDef:
                 self.maxDef = num2
@@ -259,41 +283,25 @@ class Mappings:
             row)), strings[1:]))
         return rval
 
-
-class ElementFinder:
-    
-    def __init__(self, m:Mappings):
-        self.m = m
-        self.table = {}
-    
-    class E:
-        def __init__(self, code:int, *values:str):
-            self.code = code
-            self.values = values
-            for v in values:
-                assert type(v) is str
-            self.equalities = []
-            self.order = None
-        def _isMult(self, other1, other2):
-            '''other1*other2 = self, so how can self be simplified/
-            replesented?'''
-            assert type(other1) is E
-            assert type(other2) is E
-            
-            for e1 in other1.equalities:
-                for e2 in other2.equalities:
-                    self.equalities.append(e1+e2)
-            # TODO: simplification and order calculation
-
-        def __eq__(self, other):
-            return self.code == other.code
-        def __ne__(self, other):
-            return not self.__eq__(other)
-        def __hash__(self):
-            return self.code.__hash__() # TODO: better hashing function
-            # although self.values can change, it is only telling us more
-            # about the element, and its actual behaviour and properties
-            # do not change.
+'''
+    def simplify(self):
+        # removes larger numbers of duplicates.
+        equiv = []
+        for num1, char, num2 in self.definitions():
+            for _num1, _char, _num2 in self.definitions():
+                if _char == char and _num2 == num2 and num1 != _num1:
+                    print(num1, char, num2, _num1, _char, _num2)
+                    added = False
+                    for elementlist in equiv:
+                        if num1 in elementlist:
+                            elementlist.append(_num1)
+                            added = True
+                        elif _num1 in elementlist:
+                            elementlist.append(num1)
+                            added = True
+                    if not added:
+                        equiv.append([num1, ])
+                        '''
 
 
 class Group:
@@ -314,7 +322,7 @@ class Group:
 
     def addNumber(self):
         '''adds a new entry to this groups datatable and mappings table'''
-        if self.m.createDefinition() is False:
+        if self.m.createDefinition(self.dt) is False:
             return
         self.dt.addRow()
 
@@ -323,7 +331,7 @@ class Group:
         while self.dt._incomplete():
             self.addNumber()
             self.dt.putDefined(self.m)
-        self.elements = []
+            print(self)
 
     def __str__(self):
         toddc = str(self.dt).split('\n')
@@ -333,5 +341,3 @@ class Group:
         for t, d in zip(toddc[1:], defn[1:]):
             rval += '\n' + t + d
         return rval
-        #return ('Todd-Coxter algorithm:\n{}\n\nBasic element table: \n{}\n'
-            #.format(str(self.dt),str(self.m)))
