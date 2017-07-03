@@ -196,7 +196,6 @@ class Mappings:
         for char, mappings in self.table.items():
             for num1, num2 in mappings.items():
                 yield num1, char, num2
-        
 
     def createDefinition(self, dataTable=None):
         '''creates a new definition at the earliest position available.'''
@@ -283,7 +282,29 @@ class Mappings:
             row)), strings[1:]))
         return rval
 
-'''
+    def elementLiterals(self):
+        rval = {}
+        for i in range(self.maxDef):
+            rval[i+1] = set()
+        rval[1].add('')
+        for generator in self.table.keys():
+            rval[self.fLookup(1, generator)].add(generator)
+        def defined():
+            v = set()
+            for number, value in rval.items():
+                if len(value)>0:
+                    v.add(number)
+            return v
+        while len(defined()) != self.maxDef-1:
+            for i in defined():
+                for generator in self.table.keys():
+                    for equivalent in rval[i]:
+                        rval[self.fLookup(i, generator)].add(equivalent+generator)
+        return rval
+
+
+
+    '''
     def simplify(self):
         # removes larger numbers of duplicates.
         equiv = []
@@ -303,9 +324,7 @@ class Mappings:
                         equiv.append([num1, ])
                         '''
 
-
-class Group:
-
+class ToddCoxeter:
     def __init__(self, string):
         """string should be a generator of the form
         <A, B[,*x]|AAA,BB,AAB[,*y]> where x are characters that represent
@@ -341,3 +360,4 @@ class Group:
         for t, d in zip(toddc[1:], defn[1:]):
             rval += '\n' + t + d
         return rval
+

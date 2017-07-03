@@ -8,7 +8,8 @@ print("starting")
 inpt = '<A, B, C|AAAA,CC,BB, ABCABC, ABAB, ACAC>'
 inpt = '<A,B|AAABAAABAAABAAAB,AAAA,BB,AABAAB>'
 print('input: {}'.format(inpt))
-a = GroupTools.Group(inpt)
+a = GroupTools.ToddCoxeter(inpt)
 
 a.solve()
 print(str(a))
+print(a.m.elementLiterals())
