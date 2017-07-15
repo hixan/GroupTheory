@@ -282,7 +282,7 @@ class Mappings:
             row)), strings[1:]))
         return rval
 
-    def elementLiterals(self):
+    def _allElementLiterals(self):
         rval = {}
         for i in range(self.maxDef):
             rval[i+1] = set()
@@ -302,7 +302,34 @@ class Mappings:
                         rval[self.fLookup(i, generator)].add(equivalent+generator)
         return rval
 
+    def elementLiterals(self):
+        def order(string):
+            rval = len(string)
+            for c in string:
+                rval *=1000
+                rval += ord(c)
+            return rval
+        rval = {}
+        for key, value in self._allElementLiterals().items():
+            if len(value)==0:
+                continue
+            rval[key] = min(value, key=order)
+        return rval
 
+    def numberOf(self, element):
+        rval = 1
+        e = element
+        while len(e)>0:
+            rval = self.fLookup(rval, element[0])
+            e = e[1:]
+        return rval
+
+    def operator(self, e1, e2):
+        literals = self.elementLiterals()
+        rval = literals[self.numberOf(e1+e2)]
+        if rval=='':
+            return 'I'
+        return rval
 
     '''
     def simplify(self):
@@ -361,3 +388,45 @@ class ToddCoxeter:
             rval += '\n' + t + d
         return rval
 
+class Group:
+    def __init__(self, elementSet, operation):
+        self._operation = operation
+        self._elementSet = set()
+        self._identity = None
+        for element in elementSet:
+            self._elementSet.add(Element(self, element))
+    def operation(self, element1, element2):
+        assert type(element1) == Element and type(element2) == Element
+        return self._operation(element1.value, element2.value)
+
+    @property
+    def identity(self):
+        if identity is None:
+            self._findIdentity()
+        return self._identity
+
+    def _findIdentity(self):
+        ''' finds the identity element in elementSet and sets self._identity. '''
+        for element in self._elementSet:
+            isIdentity = True
+            for e2 in self._elementSet:
+                if element * e2 != e2:
+                    isIdentity = False
+                    break
+            if isIdentity:
+                self._identity = element
+                return
+
+    def centralizer(self, element):
+        for element in 
+
+    class Element:
+        def __init__(self, group, value):
+            self._group = group
+            self._value = value
+        def __mul__(self, other):
+            return self._group.operation(self, other)
+        def __eq__(self, other):
+            return self.value == other.value and type(self) == type(other)
+        def __neq__(self, other):
+            return !self.__eq__(other)

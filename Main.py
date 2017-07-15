@@ -12,4 +12,4 @@ a = GroupTools.ToddCoxeter(inpt)
 
 a.solve()
 print(str(a))
-print(a.m.elementLiterals())
+print(a.m.operator('ABABAABABAAAABBBBBBBBA','ABBBBAAAAAAAABAA'))
