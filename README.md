@@ -13,7 +13,7 @@ define groups as strings:
 and pass to the Group object:
 ```
 from FroupTools import Group
-inpt = '<A|AAA>'
+inpt = '<A,B|AAAA,AB,BBBB>'
 mygroup = Group(inpt)
 mygroup.solve()
 print(str(mygroup))
@@ -24,5 +24,5 @@ print(str(mygroup))
 - support for inverse elements
 - element equivalence calculation
 ### Changelog
- . 1.0:
+1.0:
   - first working prototype

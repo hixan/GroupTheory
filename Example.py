@@ -7,6 +7,7 @@ import GroupTools
 print("starting")
 inpt = '<A, B, C|AAAA,CC,BB, ABCABC, ABAB, ACAC>'
 inpt = '<A,B|AAABAAABAAABAAAB,AAAA,BB,AABAAB>'
+inpt = '<A,B|AB,AAAA,BBBB'
 print('input: {}'.format(inpt))
 a = GroupTools.Group(inpt)
 
