@@ -20,8 +20,8 @@ print(str(mygroup))
 ```
 
 ### Wanted Features
-	- element multiplication table
-	- element equivalence calculation
+- element multiplication table
+- element equivalence calculation
 ### Changelog
-	1.0:
-		first working prototype
+ . 1.0:
+  - first working prototype
