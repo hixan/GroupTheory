@@ -3,7 +3,7 @@ This is a module (and example on how to use) about group thoery, and group gener
 
 ### What can it do?
 Currently, it can produce (using the famous [Todd-Coxeter Algorithm](https://en.wikipedia.org/wiki/Todd%E2%80%93Coxeter_algorithm)) all possible elements of a group given its generators. It currently only supports non-inverse elements (so
-using standard notation, only capital lettered independant elements; [Helpful Information](http://sporadic.stanford.edu/bump/group/gr1_1.html)) so identity combinations must be converted using the elements order.
+using standard notation, only capital lettered independant elements; [Helpful Information](http://sporadic.stanford.edu/bump/group/gr1_1.html)) so identity combinations must be converted using the elements order. For Example if inverse(B) == A, AB is equal to the Identity element and so `AB` is added as a representation of the identity element.
 
 ### Use
 define groups as strings:
@@ -21,6 +21,7 @@ print(str(mygroup))
 
 ### Wanted Features
 - element multiplication table
+- support for inverse elements
 - element equivalence calculation
 ### Changelog
  . 1.0:
